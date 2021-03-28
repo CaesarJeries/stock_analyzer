@@ -75,7 +75,7 @@ def display_available_stocks(companies):
 
 def display_stock_stats(company, start_date, end_date):
     """
-    Displays statistics about the given `stock` in the time period that is selected by the user.
+    Displays statistics about the given `company` in the time period that is selected by the user.
     """
     pass
 
