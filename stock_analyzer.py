@@ -15,6 +15,20 @@ matplotlib.use('GTK3Agg')
 
 
 def get_choice_path(menu):
+    """
+    Prompts the user to make a choice out of the given `menu`.
+    The structure of menu is as follows:
+        {
+            <choice-label>: {
+                'msg': the message to display to the user
+                'sub': (optional) a sub-menu. It follows the same structure rules
+            },
+            ...
+        }
+    
+    @return - the choice path, i.e, the series of choices the user made until a concrete operation
+              was reached.
+    """
     menu_itr = menu
     choice_path = ''
     while True: 
@@ -162,14 +176,26 @@ def display_daily_yield_stats(data):
 
 
 def calculate_sharpe_metric(data):
+    """
+    Calculates and displays Sharpe metric according to the following formula:
+        S = r / d
+        Where r is the average of daily returns, and d is the standard deviation of the daily returns
+    
+    @return - S, the Sharpe metric 
+    """
     daily_yields =  data['Adj Close'].pct_change()[1:]
     average, std_dev, _, _ = get_stats(daily_yields)
     s = average / std_dev
 
     print('Sharpe metric: {}'.format(s))
+    return s
 
 
 def plot_exchange_rates(data, symbol):
+    """
+    Plots the opening and the adjusted closing rates of the given stock.
+    The stock rates are represented in the dataframe `data` (as returned from yfinance.download)
+    """
     logging.debug('Plotting exchange rate for {}'.format(symbol))
     plt.figure(figsize=(15, 10))
     plt.rc('xtick', labelsize=7)
@@ -183,6 +209,10 @@ def plot_exchange_rates(data, symbol):
 
 
 def plot_daily_yields(data, symbol):
+    """
+    Plots the daily yields (returns) of the given stock.
+    The stock rates are represented in the dataframe `data` (as returned from yfinance.download)
+    """
     logging.debug('Plotting daily yields for {}'.format(symbol))
     plt.figure(figsize=(15, 10))
     plt.rc('xtick', labelsize=7)
@@ -198,6 +228,10 @@ def plot_daily_yields(data, symbol):
 
 
 def plot_exchange_rates_hist(data, symbol):
+    """
+    Plots a histogram of the closing adjusted closing rates of the given stock.
+    The stock rates are represented in the dataframe `data` (as returned from yfinance.download)
+    """
     logging.debug('Plotting a histogram of exchange rates of {}'.format(symbol))
     plt.figure(figsize=(15, 10))
     plt.title('A histogram of exchange rates of {}'.format(symbol))
@@ -206,6 +240,10 @@ def plot_exchange_rates_hist(data, symbol):
 
 
 def plot_daily_yields_hist(data, symbol):
+    """
+    Plots a histogram of the daily returns (yields) of the given stock.
+    The stock rates are represented in the dataframe `data` (as returned from yfinance.download)
+    """
     logging.debug('Plotting a histogram of daily yields of {}'.format(symbol))
     plt.figure(figsize=(15, 10))
     plt.title('A histogram of the daily yields of {}'.format(symbol))
@@ -215,6 +253,12 @@ def plot_daily_yields_hist(data, symbol):
 
 
 def calculate_alpha_beta(data, symbol, start_date, end_date):
+    """
+    Calculates Jensen's alpha and beta coefficients.
+    The regression is done against the S&P500 stock in the date range `start_date` - `end_date` (inclusive)
+
+    @return - a tuple: (alpha, beta)
+    """
     logging.debug('Calculating alpha of {}'.format(symbol))
 
     benchmark_data = fetch_data('SPY', start_date, end_date)
@@ -234,6 +278,11 @@ def calculate_alpha_beta(data, symbol, start_date, end_date):
 
 
 def analyze_stock(symbol, start_date, end_date):
+    """
+    Displays a list of available analysis options, and prompts the user for a choice.
+    On choice, the corresponding analysis is run and results are displayed to the user.
+    This function does not return a value.
+    """
     menu = {
         'a': {
             'msg': 'Display statistics of the adjusted closing rate (Average / Standard Deviation / Maximum / Minimum)'
