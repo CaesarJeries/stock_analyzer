@@ -138,7 +138,7 @@ def get_stats(arr):
     return (average, std_dev, maximum, minimum)
 
 
-def display_closing_summary(data):
+def display_closing_summary(data, symbol):
     """
     data - A pandas DataFrame as returned from yfinance.
            It contains the following columns: Open | High | Low | Close | Adj Close | Volume
@@ -152,11 +152,11 @@ def display_closing_summary(data):
     adjusted_closing_rates = data['Adj Close'].to_numpy()
     stats = get_stats(adjusted_closing_rates)
 
-    print('Statistics of the stock\'s closing rate:')
+    print('{}: Statistics of the stock\'s closing rate:'.format(symbol))
     print('Average: {}\nStandard Deviation: {}\nMaximum: {}\nMinimum: {}'.format(*stats))
 
 
-def display_daily_yield_stats(data):
+def display_daily_yield_stats(data, symbol):
     """
     data - A pandas DataFrame as returned from yfinance.
            It contains the following columns: Open | High | Low | Close | Adj Close | Volume
@@ -171,11 +171,11 @@ def display_daily_yield_stats(data):
     logging.debug(daily_yields)
     stats = get_stats(daily_yields)
 
-    print('Statistics of the stock\'s daily yields:')
+    print('{}: Statistics of the stock\'s daily yields:'.format(symbol))
     print('Average: {}\nStandard Deviation: {}\nMaximum: {}\nMinimum: {}'.format(*stats))
 
 
-def calculate_sharpe_metric(data):
+def calculate_sharpe_metric(data, symbol):
     """
     Calculates and displays Sharpe metric according to the following formula:
         S = r / d
@@ -187,7 +187,7 @@ def calculate_sharpe_metric(data):
     average, std_dev, _, _ = get_stats(daily_yields)
     s = average / std_dev
 
-    print('Sharpe metric: {}'.format(s))
+    print('{}: Sharpe metric: {}'.format(symbol, s))
     return s
 
 
