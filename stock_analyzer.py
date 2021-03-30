@@ -3,7 +3,15 @@
 import logging
 import yfinance
 import numpy as np
+import matplotlib
 from matplotlib import pyplot as plt
+import statsmodels.api as sm
+
+
+
+# define the back-end for matplotlib
+matplotlib.use('GTK3Agg')
+
 
 
 def get_choice_path(menu):
@@ -65,7 +73,7 @@ def get_user_input():
     """
     stock = input('Enter desired stock: ')
     start_date = input('Enter start date (yyyy-mm-dd): ')
-    end_date = input('Enter start date (yyyy-mm-dd): ')
+    end_date = input('Enter end date (yyyy-mm-dd): ')
     return stock, start_date, end_date
 
 
@@ -81,14 +89,33 @@ def display_available_stocks(companies):
 
 
 def fetch_data(symbol, start_date, end_date):
+    """
+    Downloads and returns a dataframe that represents the history of the given
+    stock `symbol` in the date range defined by `start_date` - `end_date` (inclusive)
+    """
     logging.debug('Fetching info for stock {} from {} until {}'.format(symbol, start_date, end_date))
-    data = yfinance.download(tickers=symbol, start=start_date, end=end_date, time_interval='daily')
+    
+    interval = 'daily'
+    if start_date == end_date:
+        logging.debug('Using hourly interval')
+        interval = 'hourly'
+    
+    data = yfinance.download(tickers=symbol, start=start_date, end=end_date, time_interval=interval)
     logging.debug(data)
 
     return data
 
 
 def get_stats(arr):
+    """
+    Calculates and returns the following stats for the given numpy-like array `arr`:
+        - Average
+        - Standard deviation
+        - Maximum
+        - Minimum
+    
+    @return - a tuple containing the metrics above, in the specified order (left-to-right)
+    """
     average = arr.mean()
     std_dev = arr.std()
     maximum = arr.max()
@@ -111,6 +138,7 @@ def display_closing_summary(data):
     adjusted_closing_rates = data['Adj Close'].to_numpy()
     stats = get_stats(adjusted_closing_rates)
 
+    print('Statistics of the stock\'s closing rate:')
     print('Average: {}\nStandard Deviation: {}\nMaximum: {}\nMinimum: {}'.format(*stats))
 
 
@@ -125,23 +153,84 @@ def display_daily_yield_stats(data):
         - Maximum
         - Minimum
     """
-    daily_yield =  1 - data['Adj Close'].to_numpy() / data['Open'].to_numpy()
-    logging.debug(daily_yield)
-    stats = get_stats(daily_yield)
+    daily_yields =  data['Adj Close'].pct_change()[1:]
+    logging.debug(daily_yields)
+    stats = get_stats(daily_yields)
+
+    print('Statistics of the stock\'s daily yields:')
     print('Average: {}\nStandard Deviation: {}\nMaximum: {}\nMinimum: {}'.format(*stats))
 
 
-def display_stock_stats(symbol, start_date, end_date):
-    """
-    Displays statistics about the given `symbol` in the time period that is selected by the user.
-    """
-    data = fetch_data(symbol, start_date, end_date)
+def calculate_sharpe_metric(data):
+    daily_yields =  data['Adj Close'].pct_change()[1:]
+    average, std_dev, _, _ = get_stats(daily_yields)
+    s = average / std_dev
 
-    print('\nPrinting stats for: Symbol: {}. Range: {} - {}'.format(symbol, start_date, end_date))
-    print('\nAdjusted Closing Rates:')
-    display_closing_summary(data)
-    print('\nDaily Yield:')
-    display_daily_yield_stats(data)
+    print('Sharpe metric: {}'.format(s))
+
+
+def plot_exchange_rates(data, symbol):
+    logging.debug('Plotting exchange rate for {}'.format(symbol))
+    plt.figure(figsize=(15, 10))
+    plt.rc('xtick', labelsize=7)
+    plt.rc('ytick', labelsize=7)
+    plt.plot(data['Adj Close'], linewidth=2, color='blue', label='Adjusted Closing Rates')
+    plt.plot(data['Open'], linewidth=2, color='silver', label='Opening Rates')
+    plt.xlabel('Date', fontsize=13)
+    plt.legend()
+    plt.title('The exchange rates for {}'.format(symbol))
+    plt.show()
+
+
+def plot_daily_yields(data, symbol):
+    logging.debug('Plotting daily yields for {}'.format(symbol))
+    plt.figure(figsize=(15, 10))
+    plt.rc('xtick', labelsize=7)
+    plt.rc('ytick', labelsize=7)
+
+    yields = data['Adj Close'].pct_change()[1:]
+    plt.plot(yields, linewidth=2, color='black')
+    
+    plt.xlabel('Date', fontsize=13)
+    plt.ylabel('Daily Yields', fontsize=13)
+    plt.title('Daily yields of {}'.format(symbol))
+    plt.show()
+
+
+def plot_exchange_rates_hist(data, symbol):
+    logging.debug('Plotting a histogram of exchange rates of {}'.format(symbol))
+    plt.figure(figsize=(15, 10))
+    plt.title('A histogram of exchange rates of {}'.format(symbol))
+    plt.hist(data['Adj Close'])
+    plt.show()
+
+
+def plot_daily_yields_hist(data, symbol):
+    logging.debug('Plotting a histogram of daily yields of {}'.format(symbol))
+    plt.figure(figsize=(15, 10))
+    plt.title('A histogram of the daily yields of {}'.format(symbol))
+    yields = data['Adj Close'].pct_change()[1:]
+    plt.hist(yields)
+    plt.show()
+
+
+def calculate_alpha_beta(data, symbol, start_date, end_date):
+    logging.debug('Calculating alpha of {}'.format(symbol))
+
+    benchmark_data = fetch_data('SPY', start_date, end_date)
+    benchmark_returns = benchmark_data['Adj Close'].pct_change()
+
+    X = benchmark_returns[1:]
+    X = sm.add_constant(X)
+    
+    Y = data['Adj Close'].pct_change()[1:]
+    
+    model = sm.OLS(Y, X).fit()
+    coeff = model.params
+
+    logging.debug('α = {}, β = {}'.format(*coeff))
+
+    return coeff
 
 
 def analyze_stock(symbol, start_date, end_date):
@@ -179,8 +268,27 @@ def analyze_stock(symbol, start_date, end_date):
     }
 
     choice = get_choice_path(menu)
+    
+    handlers = {
+        'a': display_closing_summary,
+        'b': display_daily_yield_stats,
+        'c': calculate_sharpe_metric,
+        'd': plot_exchange_rates,
+        'e': plot_daily_yields,
+        'f': plot_exchange_rates_hist,
+        'g': plot_daily_yields_hist
+    }
 
-    return choice # todo: handle choices
+    data = fetch_data(symbol, start_date, end_date)
+    if choice in handlers:
+        handlers[choice](data, symbol)
+    elif choice == 'i' or choice == 'j':
+        alpha, beta = calculate_alpha_beta(data, symbol, start_date, end_date)
+
+        if (choice == 'i'):
+            print('The alpha of {} is {}'.format(symbol, alpha))
+        else:
+            print('The beta of {} is {}'.format(symbol, beta))
 
 
 def main():
