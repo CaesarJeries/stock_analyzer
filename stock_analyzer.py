@@ -341,7 +341,7 @@ def analyze_stock(symbol, start_date, end_date):
 
 
 def main():
-    symbols = ['EBAY' , 'ecl', 'Eix', 'ew', 'ea']
+    symbols = ['EBAY', 'ecl', 'Eix', 'ew', 'ea']
 
     while True:
         choice = get_user_choice()
